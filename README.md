@@ -8,5 +8,8 @@ python3 -m venv venv
 Install dependencies 
 pip3 install -r requirements.txt
 
+run app 
+streamlit run app.py
+
 to exit the virtual envioroment you:
 deactivate
