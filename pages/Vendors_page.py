@@ -48,5 +48,4 @@ if save:
 
         insert_vendors_in_bulk(df)
 
-        st.write("Students have been created successfully")
     

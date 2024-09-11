@@ -61,12 +61,14 @@ def get_all_the_vendors():
             """
             cursor.execute(query)
             vendors = cursor.fetchall()
-            print(vendors)
         except Error as e:
             print(f"Error while getting vendors from database: {e}")
         finally:
-            cursor.close()
-            return vendors
+            if cursor is not None:
+                cursor.close()
+            if connection is not None and connection.is_connected():
+                connection.close()
+            return(vendors)
         
 def insert_single_vendor(values):
     connection = mysql.connector.connect(
@@ -87,14 +89,18 @@ def insert_single_vendor(values):
             cursor.execute(query, values)
             connection.commit()
 
-            cursor.close()
-
             st.write(f"{cursor.rowcount} rows inserted successfully.")
 
     except Error as e:
         print(f"Error: {e}")
         if connection:
             connection.rollback()
+    
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if connection is not None and connection.is_connected():
+            connection.close()
 
 def extract_vendors_from_excel(excel_file):
     try:

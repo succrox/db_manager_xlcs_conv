@@ -1,17 +1,18 @@
 import os
 import mysql.connector
 from mysql.connector import Error
+import streamlit as st
+import pandas as pd
 
-def insert_sales_in_bulk(df, table_name='students'):
+def insert_sale_in_bulk(df):
     connection = None
     cursor = None
 
     try:
-        
         connection = mysql.connector.connect(
             host=os.getenv("DB_HOST"),
             user=os.getenv("DB_USER"),
-            password=os.getenv(""),
+            password="",
             database=os.getenv("DB_NAME")
         )
 
@@ -19,20 +20,20 @@ def insert_sales_in_bulk(df, table_name='students'):
             cursor = connection.cursor()
 
             insert_query = f"""
-            INSERT INTO {table_name} (code, full_name, emails, course_id)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO sales (Id_vendor, Name_client, Product, Quantity, Unitary_p, Tot_sale, Payment, Status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
 
-            students_data = df.to_records(index=False).tolist()
+            data = df.to_records(index=False).tolist()
 
-            cursor.executemany(insert_query, students_data)
+            cursor.executemany(insert_query, data)
             
             connection.commit()
 
-            print(f"{cursor.rowcount} rows inserted successfully.")
+            st.write(f"{cursor.rowcount} rows inserted successfully.")
 
     except Error as e:
-        print(f"Error: {e}")
+        st.write(f"Error: {e}")
         if connection:
             connection.rollback()
 
@@ -42,7 +43,7 @@ def insert_sales_in_bulk(df, table_name='students'):
         if connection is not None and connection.is_connected():
             connection.close()
 
-def get_all_the_courses():
+def get_all_the_sales():
     connection = mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -56,13 +57,67 @@ def get_all_the_courses():
         try:
             cursor = connection.cursor(dictionary=True)
             query = """
-                SELECT c.id, c.name FROM courses as c;
+                SELECT s.ID, s.Id_vendor, s.Product, s.Tot_sale FROM sales as s;
             """
             cursor.execute(query)
-            courses = cursor.fetchall()
-            print(courses)
+            sales = cursor.fetchall()
+            print(sales)
         except Error as e:
-            print(f"Error while getting courses from database: {e}")
+            print(f"Error while getting sales from database: {e}")
         finally:
+            if cursor is not None:
+                cursor.close()
+            if connection is not None and connection.is_connected():
+                connection.close()
+            return sales
+        
+def insert_single_sale(values):
+    connection = mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password="",
+        database=os.getenv("DB_NAME")
+    )
+    try:
+        if connection.is_connected():
+            cursor = connection.cursor(dictionary=True)
+
+            query = f"""
+            INSERT INTO sales (Id_vendor, Name_client, Product, Quantity, Unitary_p, Tot_sale, Payment, Status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(query, values)
+            connection.commit()
+
+            st.write(f"{cursor.rowcount} rows inserted successfully.")
+
+    except Error as e:
+        print(f"Error: {e}")
+        if connection:
+            connection.rollback()
+    finally:
+        if cursor is not None:
             cursor.close()
-            return courses
+        if connection is not None and connection.is_connected():
+            connection.close()
+
+def extract_sale_from_excel(excel_file):
+    try:
+        df = pd.read_excel(excel_file)
+    except Exception as e:
+        st.write(f"Error reading the Excel file: {e}")
+        return []
+
+    df = df.rename(columns={
+        'ID Vendedor': 'vendor',
+        'Nombre del Cliente': 'client',
+        'Producto': 'product',
+        'Cantidad': 'quantity',
+        'Precio Unitario': 'unitary',
+        'Total de la Venta': 'sale',
+        'Método de Pago': 'payment',
+        'Estado de la Venta': 'state'
+    })
+    
+    return(df)
